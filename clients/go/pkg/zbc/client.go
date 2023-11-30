@@ -18,13 +18,14 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/camunda/zeebe/clients/go/v8/internal/embedded"
-	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/camunda/zeebe/clients/go/v8/internal/embedded"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -207,22 +208,27 @@ func applyClientEnvOverrides(config *ClientConfig) error {
 		config.OverrideAuthority = overrideAuthority
 	}
 
-	if gatewayHost := env.get(GatewayHostEnvVar); gatewayHost != "" {
-		if gatewayPort := env.get(GatewayPortEnvVar); gatewayPort != "" {
-			config.GatewayAddress = fmt.Sprintf("%s:%s", gatewayHost, gatewayPort)
-		} else {
-			config.GatewayAddress = fmt.Sprintf("%s:%s", gatewayHost, DefaultAddressPort)
+	if config.GatewayAddress == "" {
+		if gatewayHost := env.get(GatewayHostEnvVar); gatewayHost != "" {
+			if gatewayPort := env.get(GatewayPortEnvVar); gatewayPort != "" {
+				config.GatewayAddress = fmt.Sprintf("%s:%s", gatewayHost, gatewayPort)
+			} else {
+				config.GatewayAddress = fmt.Sprintf("%s:%s", gatewayHost, DefaultAddressPort)
+			}
+		} else if gatewayPort := env.get(GatewayPortEnvVar); gatewayPort != "" {
+			config.GatewayAddress = fmt.Sprintf("%s:%s", DefaultAddressHost, gatewayPort)
+		} else if gatewayAddress := env.get(GatewayAddressEnvVar); gatewayAddress != "" {
+			config.GatewayAddress = gatewayAddress
 		}
-	} else if gatewayPort := env.get(GatewayPortEnvVar); gatewayPort != "" {
-		config.GatewayAddress = fmt.Sprintf("%s:%s", DefaultAddressHost, gatewayPort)
-	} else if gatewayAddress := env.get(GatewayAddressEnvVar); gatewayAddress != "" {
-		config.GatewayAddress = gatewayAddress
 	}
 
 	if val := env.get(KeepAliveEnvVar); val != "" {
 		keepAlive, err := strconv.ParseUint(val, 10, 64)
 		if err != nil {
-			return fmt.Errorf("keep alive must be expressed as positive number of milliseconds: %w", err)
+			return fmt.Errorf(
+				"keep alive must be expressed as positive number of milliseconds: %w",
+				err,
+			)
 		}
 
 		config.KeepAlive = time.Duration(keepAlive) * time.Millisecond
@@ -240,7 +246,9 @@ func configureCredentialsProvider(config *ClientConfig) error {
 
 	if config.CredentialsProvider != nil {
 		if config.UsePlaintextConnection {
-			log.Println("Warning: The configured security level does not guarantee that the credentials will be confidential. If this unintentional, please enable transport security.")
+			log.Println(
+				"Warning: The configured security level does not guarantee that the credentials will be confidential. If this unintentional, please enable transport security.",
+			)
 		}
 
 		callCredentials := &callCredentials{credentialsProvider: config.CredentialsProvider}
@@ -277,7 +285,9 @@ func configureConnectionSecurity(config *ClientConfig) error {
 		var creds credentials.TransportCredentials
 
 		if config.CaCertificatePath == "" {
-			creds = credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12, ServerName: config.OverrideAuthority})
+			creds = credentials.NewTLS(
+				&tls.Config{MinVersion: tls.VersionTLS12, ServerName: config.OverrideAuthority},
+			)
 		} else if _, err := os.Stat(config.CaCertificatePath); os.IsNotExist(err) {
 			return fmt.Errorf("expected to find CA certificate but no such file at '%s': %w", config.CaCertificatePath, ErrFileNotFound)
 		} else {
@@ -303,7 +313,10 @@ func configureKeepAlive(config *ClientConfig) error {
 	} else if config.KeepAlive != time.Duration(0) {
 		keepAlive = config.KeepAlive
 	}
-	config.DialOpts = append(config.DialOpts, grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: keepAlive}))
+	config.DialOpts = append(
+		config.DialOpts,
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{Time: keepAlive}),
+	)
 
 	return nil
 }
