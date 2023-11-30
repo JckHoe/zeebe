@@ -18,13 +18,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/camunda/zeebe/clients/go/v8/internal/utils"
-	"google.golang.org/grpc/metadata"
 	"net"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/camunda/zeebe/clients/go/v8/internal/utils"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc"
@@ -169,10 +170,12 @@ func (s *clientTestSuite) TestGatewayAddressEnvVar() {
 func (s *clientTestSuite) TestDefaultUserAgent() {
 	// given
 	var incomingContext = make(map[string][]string)
-	lis, server := createServerWithUnaryInterceptor(func(ctx context.Context, _ interface{}, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (interface{}, error) {
-		incomingContext, _ = metadata.FromIncomingContext(ctx)
-		return nil, nil
-	})
+	lis, server := createServerWithUnaryInterceptor(
+		func(ctx context.Context, _ interface{}, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (interface{}, error) {
+			incomingContext, _ = metadata.FromIncomingContext(ctx)
+			return nil, nil
+		},
+	)
 	go server.Serve(lis)
 	defer server.Stop()
 
@@ -196,10 +199,12 @@ func (s *clientTestSuite) TestDefaultUserAgent() {
 func (s *clientTestSuite) TestSpecificUserAgent() {
 	// given
 	var incomingContext = make(map[string][]string)
-	lis, server := createServerWithUnaryInterceptor(func(ctx context.Context, _ interface{}, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (interface{}, error) {
-		incomingContext, _ = metadata.FromIncomingContext(ctx)
-		return nil, nil
-	})
+	lis, server := createServerWithUnaryInterceptor(
+		func(ctx context.Context, _ interface{}, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (interface{}, error) {
+			incomingContext, _ = metadata.FromIncomingContext(ctx)
+			return nil, nil
+		},
+	)
 	go server.Serve(lis)
 	defer server.Stop()
 
@@ -363,7 +368,11 @@ func (s *clientTestSuite) TestClientWithDefaultCredentialsProvider() {
 		_ = lis.Close()
 	}()
 
-	authzServer := mockAuthorizationServerWithAudience(s.T(), &mutableToken{value: accessToken}, "0.0.0.0")
+	authzServer := mockAuthorizationServerWithAudience(
+		s.T(),
+		&mutableToken{value: accessToken},
+		"0.0.0.0",
+	)
 	defer authzServer.Close()
 
 	env.set(OAuthClientSecretEnvVar, clientSecret)
@@ -459,10 +468,12 @@ func (s *clientTestSuite) TestCommandExpireWithContext() {
 	// given
 	blockReq := make(chan struct{})
 	defer close(blockReq)
-	lis, server := createServerWithUnaryInterceptor(func(_ context.Context, _ interface{}, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (interface{}, error) {
-		<-blockReq
-		return nil, nil
-	})
+	lis, server := createServerWithUnaryInterceptor(
+		func(_ context.Context, _ interface{}, _ *grpc.UnaryServerInfo, _ grpc.UnaryHandler) (interface{}, error) {
+			<-blockReq
+			return nil, nil
+		},
+	)
 	go server.Serve(lis)
 	defer server.Stop()
 
@@ -491,7 +502,12 @@ func (s *clientTestSuite) TestCommandExpireWithContext() {
 
 	code := status.Code(err)
 	if code != codes.DeadlineExceeded {
-		s.FailNow(fmt.Sprintf("expected command to fail with deadline exceeded, but got %s instead", code.String()))
+		s.FailNow(
+			fmt.Sprintf(
+				"expected command to fail with deadline exceeded, but got %s instead",
+				code.String(),
+			),
+		)
 	}
 }
 
@@ -524,7 +540,7 @@ func (s *clientTestSuite) TestClientWithEmptyDialOptions() {
 	}
 }
 
-func (s *clientTestSuite) TestOverrideHostAndPortEnvVar() {
+func (s *clientTestSuite) TestHostAndPortEnvVar() {
 	// given
 	address := "127.1"
 	port := "9090"
@@ -532,7 +548,6 @@ func (s *clientTestSuite) TestOverrideHostAndPortEnvVar() {
 	env.set(GatewayHostEnvVar, address)
 	env.set(GatewayPortEnvVar, port)
 	config := &ClientConfig{
-		GatewayAddress:         "wrong_address",
 		UsePlaintextConnection: true,
 	}
 
@@ -542,6 +557,26 @@ func (s *clientTestSuite) TestOverrideHostAndPortEnvVar() {
 	// then
 	s.NoError(err)
 	s.EqualValues(fmt.Sprintf("%s:%s", address, port), config.GatewayAddress)
+}
+
+func (s *clientTestSuite) TestConfigGatewayAddressOverride() {
+	// given
+	address := "127.1"
+	port := "9090"
+
+	env.set(GatewayHostEnvVar, address)
+	env.set(GatewayPortEnvVar, port)
+	config := &ClientConfig{
+		GatewayAddress:         "zeebe:9090",
+		UsePlaintextConnection: true,
+	}
+
+	// when
+	_, err := NewClient(config)
+
+	// then
+	s.NoError(err)
+	s.EqualValues("", config.GatewayAddress)
 }
 
 func createSecureServer(withSan bool) (net.Listener, *grpc.Server) {
@@ -561,7 +596,11 @@ func createServerWithDefaultAddress(opts ...grpc.ServerOption) (net.Listener, *g
 	return createServer("0.0.0.0", "0", opts...)
 }
 
-func createServer(address string, port string, opts ...grpc.ServerOption) (net.Listener, *grpc.Server) {
+func createServer(
+	address string,
+	port string,
+	opts ...grpc.ServerOption,
+) (net.Listener, *grpc.Server) {
 	lis, _ := net.Listen("tcp", fmt.Sprintf("%s:%s", address, port))
 	grpcServer := grpc.NewServer(opts...)
 	pb.RegisterGatewayServer(grpcServer, &pb.UnimplementedGatewayServer{})
