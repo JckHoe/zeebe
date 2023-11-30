@@ -217,9 +217,9 @@ func applyClientEnvOverrides(config *ClientConfig) error {
 			}
 		} else if gatewayPort := env.get(GatewayPortEnvVar); gatewayPort != "" {
 			config.GatewayAddress = fmt.Sprintf("%s:%s", DefaultAddressHost, gatewayPort)
-		} else if gatewayAddress := env.get(GatewayAddressEnvVar); gatewayAddress != "" {
-			config.GatewayAddress = gatewayAddress
 		}
+	} else if gatewayAddress := env.get(GatewayAddressEnvVar); gatewayAddress != "" {
+		config.GatewayAddress = gatewayAddress
 	}
 
 	if val := env.get(KeepAliveEnvVar); val != "" {

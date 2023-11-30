@@ -576,7 +576,7 @@ func (s *clientTestSuite) TestConfigGatewayAddressOverride() {
 
 	// then
 	s.NoError(err)
-	s.EqualValues("", config.GatewayAddress)
+	s.EqualValues("zeebe:9090", config.GatewayAddress)
 }
 
 func createSecureServer(withSan bool) (net.Listener, *grpc.Server) {
